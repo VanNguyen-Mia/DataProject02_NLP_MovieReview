@@ -5,7 +5,6 @@ This project aims to classify movie reviews using natural language processing (N
 ## Table of Contents
 
 - [Project Overview](#project-overview)
-<!-- - [Technologies](#technologies) -->
 - [Setup and Installation](#setup-and-installation)
 - [Model Training](#model-training)
 - [Usage](#usage)
@@ -121,5 +120,8 @@ Link to the Streamlit app:
 The app can also be called locally by running:
 
 ```bash
-streamlit ./app/review_classifier.py
+streamlit run ./app/review_classifier.py
 ```
+
+![alt text](image.png)
+![alt text](image-1.png)
