@@ -1,3 +1,4 @@
+import joblib
 import os
 import random
 import pandas as pd
@@ -17,14 +18,30 @@ nltk.download('averaged_perceptron_tagger')
 nltk.download('wordnet')
 
 # ----------------- Step 1: Load Data ----------------- #
-def is_git_lfs_file(file_path):
-    """Check if a file is a Git LFS pointer."""
+def is_git_lfs_file(file_path: str) -> bool:
+    """Check if a file is a Git LFS pointer
+
+    Args:
+        file_path (str): a file path to the text content file
+
+    Returns:
+        bool: True if first line is a git LFS pointer, False otherwise
+    """
     with open(file_path, "r", encoding="utf-8") as file:
         first_line = file.readline().strip()
         return first_line.startswith("version https://git-lfs.github.com")
 
-def load_data(train_path, categories):
-    """Load text data from directories and skip Git LFS files."""
+def load_data(train_path: str, categories: list) -> pd.DataFrame:
+    """Load text data from directories and skip Git LFS files
+
+    Args:
+        train_path (str): a path to the folder of training data
+        categories (list): list of categories to classify data
+
+    Returns:
+        Dataframe: dataframe with two columns: 'content' and 'category'
+    """
+    # """Load text data from directories and skip Git LFS files."""
     data = []
     for category in categories:
         category_path = os.path.join(train_path, category)
@@ -38,8 +55,16 @@ def load_data(train_path, categories):
     return pd.DataFrame(data, columns=['content', 'category'])
 
 # ----------------- Step 2: Preprocess Text ----------------- #
-def convert_tokens(text: str, verbose=False):
-    """Tokenization, decapitalization, stopword removal, lemmatization, and filtering."""
+def convert_tokens(text: str, verbose=False) -> list:
+    """Tokenization, decapitalization, stopword removal, lemmatization, and filtering
+
+    Args:
+        text (str): the text to be processed
+        verbose (bool): whether logging messages shoud be displayed
+
+    Returns:
+        list: a list of tokenized words from the original text
+    """
     # 1. Tokenization
     pattern = r'\w+'
     tokenizer = RegexpTokenizer(pattern)
@@ -113,12 +138,21 @@ def convert_tokens(text: str, verbose=False):
     return rmnb_token_words
 
 # ----------------- Step 3: Feature Engineering ----------------- #
-def vectorize_text(X_train, X_test):
-    """Convert text to TF-IDF vectors."""
+def vectorize_text(X_train: list, X_test: list, vectorizer_path:str) -> pd.DataFrame:
+    """Convert text to TF-IDF vectors and save tfidf_vectorizer
+
+    Args:
+        X_train (pd.Series): A list of strings (preprocessed texts) for training
+        X_test (pd.Series): A list of strings (preprocessed texts) for testing
+        vectorizer_path (str): path to save vectorizer
+    Returns:
+        pd.Dataframe: dataframes with TF-IDF vectors
+    """
     tfidf_vectorizer = TfidfVectorizer(norm=None)
     X_train_vect = tfidf_vectorizer.fit_transform(X_train)
     X_test_vect = tfidf_vectorizer.transform(X_test)
-    
+    joblib.dump(tfidf_vectorizer, vectorizer_path)
+
     return (
         pd.DataFrame(X_train_vect.toarray(), columns=tfidf_vectorizer.get_feature_names_out()),
         pd.DataFrame(X_test_vect.toarray(), columns=tfidf_vectorizer.get_feature_names_out()),
@@ -126,8 +160,16 @@ def vectorize_text(X_train, X_test):
     )
 
 # ----------------- Step 4: Train Model ----------------- #
-def train_naive_bayes(X_train_df, y_train):
-    """Train a Naive Bayes model with hyperparameter tuning."""
+def train_naive_bayes(X_train_df: pd.DataFrame, y_train: pd.Series):
+    """Train a Naive Bayes model with hyperparameter tuning -> return the best NB model
+
+    Args:
+        X_train_df (pd.Dataframe): Training dataframe with TF-IDF vectors
+        y_train (pd.Series): A training series contaning labels
+
+    Returns:
+        best Naive Bayes model
+    """
     param_grid = {'alpha': [0.01, 0.1, 1, 10]}  # Smoothing parameter
     grid_search = GridSearchCV(MultinomialNB(), param_grid, cv=5, scoring='accuracy')
     grid_search.fit(X_train_df, y_train)
@@ -137,18 +179,36 @@ def train_naive_bayes(X_train_df, y_train):
     
     return grid_search.best_estimator_
 
-# ----------------- Step 5: Evaluate Model ----------------- #
-def evaluate_model(model, X_test_df, y_test):
-    """Evaluate model performance and print metrics."""
+# ----------------- Step 5: Evaluate and Save Model ----------------- #
+def evaluate_model(model, X_test_df: pd.DataFrame, y_test: pd.Series, model_path: str):
+    """Evaluate model performance, print metrics and save model to model_path
+
+    Args:
+        model: best model returned from the train_naive_bayes function
+        X_test_df (pd.Dataframe): Testing dataframe with TF-IDF vecors
+        y_test (pd.Series): A testing series containing labels
+        model_path (str): path to save the model
+    """
     y_pred = model.predict(X_test_df)
     
     print("Naïve Bayes Accuracy:", accuracy_score(y_test, y_pred))
     print(classification_report(y_test, y_pred))
     print(f"Confusion Matrix:\n{confusion_matrix(y_test, y_pred)}")
 
+    # save the trained model:
+    joblib.dump(model, model_path)
+    print(f"Model saved to {model_path}")
+
 # ----------------- Step 6: Explain Predictions ----------------- #
 def explain_prediction(model, tfidf_vectorizer, X_test, y_test):
-    """Explain a random prediction using LIME."""
+    """Explain a random prediction using Lime
+
+    Args:
+        model: the trained classification model
+        tfidf_vectorizer: a fitted TfidfVectorizer
+        X_test (pd.Series): a series for testing 
+        y_test (pd.Series): a series of labels 
+    """
     explainer = lime_text.LimeTextExplainer(class_names=model.classes_)
     
     def pred_fn(text):

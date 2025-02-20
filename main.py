@@ -4,6 +4,8 @@ from src.classifier import load_data, train_test_split, convert_tokens, vectoriz
 def main():
     # Load data
     train_path = "./datasets/train"
+    model_path = "./saved_model/nb_model.joblib"
+    vectorizer_path = "./saved_model/vectorizer.joblib"
     categories = ['neg', 'pos']
     
     df = load_data(train_path, categories)
@@ -21,13 +23,13 @@ def main():
     X_test_vect = [" ".join(tokens) for tokens in X_test_vect]
 
     # Vectorize text
-    X_train_df, X_test_df, tfidf_vectorizer = vectorize_text(X_train_vect, X_test_vect)
+    X_train_df, X_test_df, tfidf_vectorizer = vectorize_text(X_train_vect, X_test_vect, vectorizer_path)
 
     # Train model
     model = train_naive_bayes(X_train_df, y_train)
 
     # Evaluate model
-    evaluate_model(model, X_test_df, y_test)
+    evaluate_model(model, X_test_df, y_test, model_path)
 
     # Explain predictions
     explain_prediction(model, tfidf_vectorizer, X_test, y_test)
