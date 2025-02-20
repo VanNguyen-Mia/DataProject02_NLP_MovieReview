@@ -116,7 +116,7 @@ python main.py
 ### 2. Run dashboard on Streamlit
 
 Movie reviews can be categorized directly via an interactive dashboard which shows the category of the review (positive/negative) with confidence level and analysis. Illustration can be found below.
-Link to the Streamlit app:
+Link to the Streamlit app: https://movie-review-classifier.streamlit.app/
 The app can also be called locally by running:
 
 ```bash
